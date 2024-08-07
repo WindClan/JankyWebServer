@@ -57,17 +57,17 @@ class LegacyWebServer(socketserver.BaseRequestHandler):
                             file = open("webroot"+path,"rb")
                             content = file.read()
                             file.close()
+                            if cacheFiles and not path in pageCache:
+                                pageCache[path] = content
                             self.request.send(content)
                             print(str(ip)+" GET "+path)
-                            if cacheFiles and (not path in pageCache or pageCache[path] != content):
-                                pageCache[path] = content
                         else:
                             self.request.send(getErrorPage("notfound"))
                             print(str(ip)+" GET "+path+" - Not found")
                     except Exception as e:
                         print(e)
-                        print(str(ip)+" GET "+path+" - Internal server error")
                         self.request.send(getErrorPage("servererror"))
+                        print(str(ip)+" GET "+path+" - Internal server error")
                 else:
                     print(str(ip)+" - Unsupported request type")
                     self.request.send(getErrorPage("unsupported"))
