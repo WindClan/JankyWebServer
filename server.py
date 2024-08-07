@@ -11,7 +11,7 @@ cacheFiles = not os.path.exists(".DISABLECACHE")
 pageCache = {}
 errorPageCache = {}
 
-serverName = b"JankyWebServer/2.0 Python/"+platform.python_version().encode('cp1252')
+serverName = b"JankyWebServer/2.1 Python/"+platform.python_version().encode('cp1252')
 
 def sanitizeUrl(dirtyUrl):
     dirtyUrl = re.sub("[^A-Za-z0-9\/\.\-_]+","",dirtyUrl.split("?")[0])
@@ -45,12 +45,12 @@ def getErrorPage(code,exception=""):
 def sendResponse(socket,content,isNewHttp=False,status=HTTPStatus.OK):
     header = b""
     if isNewHttp:
-        header = header+b"HTTP/1.0 "+(str(status.value)+" "+status.phrase).encode('cp1252')+b"\n"
-        header = header+b"Date: "+datetime.now().strftime("%a, %d %b %Y %X %Z").encode('cp1252')+b"\n"
-        header = header+b"Server: "+serverName+b"\n"
+        header = header+b"HTTP/1.0 "+(str(status.value)+" "+status.phrase).encode('cp1252')+b"\r\n"
+        header = header+b"Date: "+datetime.now().strftime("%a, %d %b %Y %X %Z").encode('cp1252')+b"\r\n"
+        header = header+b"Server: "+serverName+b"\r\n"
         if status == 405:
-            header = header+b"Allow: GET"
-        header = header+b"\n"
+            header = header+b"Allow: GET\r\n"
+        header = header+b"\r\n"
     socket.send(header+content)
 
 class LegacyWebServer(socketserver.BaseRequestHandler):
