@@ -1,6 +1,6 @@
-# JankyWebServer - Implementation of HTTP/0.9 in python
+# JankyWebServer - Implementation of HTTP/0.9 and HTTP/1.0 in python
 
-HTTP/0.9 server written in python, I tried to make it as fast and stable as possible
+HTTP/1.0 server written in python, I tried to make it as fast and stable as possible
 
 It *should* be secure but I personally wouldn't trust a Python socket server on the public web
 
