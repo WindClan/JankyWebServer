@@ -1,1 +1,3 @@
 .DISABLECACHE
+webroot/*
+!webroot/index.html
