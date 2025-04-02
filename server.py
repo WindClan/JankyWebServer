@@ -1,7 +1,10 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
 import socketserver
 from datetime import datetime
 from http import HTTPStatus
-import mimetypes
+import magic
 import threading
 import platform
 import re
@@ -11,10 +14,10 @@ cacheFiles = not os.path.exists(".DISABLECACHE")
 pageCache = {}
 errorPageCache = {}
 
-serverName = b"JankyWebServer/2.1 Python/"+platform.python_version().encode('cp1252')
+serverName = b"JankyWebServer/3.0 Python/"+platform.python_version().encode('iso-8859-1')
 
 def sanitizeUrl(dirtyUrl):
-    dirtyUrl = re.sub("[^A-Za-z0-9\/\.\-_]+","",dirtyUrl.split("?")[0])
+    dirtyUrl = re.sub("[^A-Za-z0-9\\/\\.\\-_]+","",dirtyUrl.split("?")[0])
     newUrl = ""
     parts = re.findall("[^/]+",dirtyUrl)
     result = []
@@ -40,23 +43,23 @@ def getErrorPage(code,exception=""):
         file.close()
         return content
     else:
-        return b"<h1>Error "+code.encode('cp1252')+b"</h1>\n"+str(exception).encode('cp1252')
+        return b"<h1>Error "+code.encode('iso-8859-1')+b"</h1>\n"+str(exception).encode('iso-8859-1')
 
-def sendResponse(socket,content,isNewHttp=False,status=HTTPStatus.OK):
-    header = b""
-    if isNewHttp:
-        header = header+b"HTTP/1.0 "+(str(status.value)+" "+status.phrase).encode('cp1252')+b"\r\n"
-        header = header+b"Date: "+datetime.now().strftime("%a, %d %b %Y %X %Z").encode('cp1252')+b"\r\n"
-        header = header+b"Server: "+serverName+b"\r\n"
-        if status == 405:
-            header = header+b"Allow: GET\r\n"
-        header = header+b"\r\n"
-    socket.send(header+content)
-
-class LegacyWebServer(socketserver.BaseRequestHandler):
+class JankyWebServer(socketserver.BaseRequestHandler):
+    def sendResponse(self,content,isNewHttp=False,status=HTTPStatus.OK):
+        header = b""
+        if isNewHttp:
+            header = header+b"HTTP/1.0 "+(str(status.value)+" "+status.phrase).encode('iso-8859-1')+b"\r\n"
+            header = header+b"Date: "+datetime.now().strftime("%a, %d %b %Y %X %Z").encode('iso-8859-1')+b"\r\n"
+            header = header+b"Server: "+serverName+b"\r\n"
+            header = header+b"Content-Type: "+magic.from_buffer(content,mime=True).encode('iso-8859-1')+b"\r\n"
+            if status == 405:
+                header = header+b"Allow: GET\r\n"
+            header = header+b"\r\n"
+        self.request.send(header+content)
     def handle(self):
         ip = self.request.getpeername()[0]
-        request = self.request.recv(1024).strip()
+        request = self.request.recv(8190).strip()
         isNewHttp = False
         if request != None:
             req = request.split()
@@ -65,14 +68,14 @@ class LegacyWebServer(socketserver.BaseRequestHandler):
                     path = "/"
                     try:
                         if len(req) > 1:
-                            path = req[1].decode('cp1252')
+                            path = req[1].decode('iso-8859-1')
                         if len(req) > 2:
                             isNewHttp = True
                         if path == "/" or path[-1] == "/":
                             path = path+"index.html"
                         path = sanitizeUrl(path)
                         if cacheFiles and path in pageCache :
-                            sendResponse(self.request,pageCache[path],isNewHttp,HTTPStatus.OK)
+                            self.sendResponse(pageCache[path],isNewHttp,HTTPStatus.OK)
                             print(str(ip)+" GET "+path+" - cached")
                         elif os.path.exists("webroot"+path) and os.access("webroot"+path, os.R_OK):
                             file = open("webroot"+path,"rb")
@@ -80,18 +83,18 @@ class LegacyWebServer(socketserver.BaseRequestHandler):
                             file.close()
                             if cacheFiles and not path in pageCache:
                                 pageCache[path] = content
-                            sendResponse(self.request,content,isNewHttp,HTTPStatus.OK)
+                            self.sendResponse(content,isNewHttp,HTTPStatus.OK)
                             print(str(ip)+" GET "+path)
                         else:
-                            sendResponse(self.request,getErrorPage("notfound"),isNewHttp,HTTPStatus.NOT_FOUND)
+                            self.sendResponse(getErrorPage("notfound"),isNewHttp,HTTPStatus.NOT_FOUND)
                             print(str(ip)+" GET "+path+" - Not found")
                     except Exception as e:
                         print(e)
-                        sendResponse(self.request,getErrorPage("servererror"),isNewHttp,HTTPStatus.INTERNAL_SERVER_ERROR)
+                        self.sendResponse(getErrorPage("servererror"),isNewHttp,HTTPStatus.INTERNAL_SERVER_ERROR)
                         print(str(ip)+" GET "+path+" - Internal server error")
                 else:
                     print(str(ip)+" - Unsupported request type")
-                    sendResponse(self.request,getErrorPage("unsupported"),True,HTTPStatus.METHOD_NOT_ALLOWED)
+                    self.sendResponse(getErrorPage("unsupported"),True,HTTPStatus.METHOD_NOT_ALLOWED)
         self.request.close()
 createDir("webroot")
 createDir("weberrors")
@@ -104,5 +107,6 @@ if cacheFiles:
         errorPageCache[fileName.split(".")[0]] = content
 if __name__ == "__main__":
     socketserver.ThreadingTCPServer.allow_reuse_address = True
-    with socketserver.ThreadingTCPServer(("", 80), LegacyWebServer) as server:
+    with socketserver.ThreadingTCPServer(("", 80), JankyWebServer) as server:
+        print("Server started on port 80!")
         server.serve_forever()
