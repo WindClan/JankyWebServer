@@ -17,7 +17,7 @@ cacheFiles = not os.path.exists(".DISABLECACHE")
 pageCache = {}
 errorPageCache = {}
 
-serverName = "JankyWebServer/4.0 Python/"+platform.python_version()
+serverName = "JankyWebServer/4.1 Python/"+platform.python_version()
 
 def sanitizeUrl(dirtyUrl):
     dirtyUrl = re.sub("[^A-Za-z0-9\\/\\.\\-_]+","",dirtyUrl.split("?")[0])
@@ -26,7 +26,7 @@ def sanitizeUrl(dirtyUrl):
     result = []
     for part in parts:
         if part == ".." and len(result) > 0:
-           result[len(result)-1] = None
+           result.pop(len(result)-1)
         elif part != ".." and part != ".":
              result.append(part)
     for part in result:
@@ -55,7 +55,7 @@ def parseHeaders(reqString):
     returnHeaders = {}
     headers.pop(0)
     for i in headers:
-        new = i.lower().split(':')
+        new = i.lower().split(':',1)
         returnHeaders[new[0]] = new[1]
     return returnHeaders
 def redoErrorCache():
